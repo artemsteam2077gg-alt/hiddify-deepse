@@ -1,0 +1,80 @@
+name: Build DeepSe APK
+
+on:
+  push:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: write
+      checks: write
+      pull-requests: write
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.24.5'
+          channel: 'stable'
+
+      - name: Install dependencies
+        run: |
+          flutter clean
+          flutter pub get
+          
+      - name: Create local.properties
+        run: |
+          mkdir -p android
+          echo "sdk.dir=/usr/local/android-sdk" > android/local.properties
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Upload APK to Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: deepse-vpn-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+          retention-days: 30
+
+      - name: Create Release
+        if: github.ref == 'refs/heads/main'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: DeepSe VPN v1.0.${{ github.run_number }}
+          body: |
+            ## 🚀 DeepSe VPN - Автоматическая сборка
+            
+            ### ✅ Функции:
+            - Две кнопки: ТУРБО и ОХОТНИК
+            - 10 цветовых тем DeepSe
+            - Таймер охотника 5 минут
+            - Проверки пинга и TCP
+            
+            ### 📥 Установка:
+            1. Скачайте APK
+            2. Разрешите установку из неизвестных источников
+            3. Вставьте свою подписку
+            
+            ### 🎯 Подписка:
+            ```
+            https://raw.githubusercontent.com/artemsteam2077gg-alt/myvpn/main/happ_subscription.txt
+            ```
+          files: |
+            build/app/outputs/flutter-apk/app-release.apk
